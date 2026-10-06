@@ -1,4 +1,5 @@
 import { distance, snappedBbox, type LatLng } from './geo';
+import { fetchOverpass, type Bbox } from './overpass';
 
 export interface Place extends LatLng {
   id: string;
@@ -11,33 +12,12 @@ export interface Place extends LatLng {
   facts: string[];
 }
 
-// Public Overpass servers are free and keyless, and regularly overloaded. Try each in turn.
-const ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-];
+/** Per-request timeout for Wikipedia, and for each Overpass server in local dev. */
 const PER_SERVER_MS = 9000;
 /** Total time given to OpenStreetMap before planning with whatever else came back. */
-const OSM_BUDGET_MS = 15000;
+const OSM_BUDGET_MS = 20000;
 /** Parks and temples don't move. A week-old map is fine, and it makes repeat quests work offline. */
 const CACHE_MS = 7 * 24 * 3600 * 1000;
-
-function query([s, w, n, e]: number[]): string {
-  const b = `(${s},${w},${n},${e})`;
-  return `[out:json][timeout:25];
-(
-  nwr["leisure"~"^(park|garden|nature_reserve|playground)$"]${b};
-  nwr["amenity"~"^(place_of_worship|cafe|fountain|library|marketplace|community_centre)$"]${b};
-  nwr["historic"]${b};
-  nwr["tourism"~"^(artwork|viewpoint|attraction|museum|gallery)$"]${b};
-  nwr["natural"="tree"]["denotation"~"^(landmark|natural_monument)$"]${b};
-  nwr["natural"~"^(water|peak|tree_row)$"]["name"]${b};
-  nwr["water"~"^(lake|pond|river|reservoir)$"]${b};
-  nwr["shop"~"^(tea|bakery|books|florist)$"]${b};
-);
-out center tags 400;`;
-}
 
 interface OsmElement {
   type: string;
@@ -133,30 +113,24 @@ export async function fetchPlaces(c: LatLng, radiusM: number): Promise<Place[]> 
   }
   const stale = readCache(key, Infinity);
   if (stale) return stale;
+  if (osm.status === 'fulfilled' && wiki.status === 'fulfilled')
+    throw new Error("The map has nothing marked around here yet. Try a longer walk, or add a place to OpenStreetMap!");
   throw new Error('The free map servers are busy right now. Give it a minute and try again.');
 }
 
-async function fetchOsm(bbox: number[]): Promise<Place[]> {
-  const body = 'data=' + encodeURIComponent(query(bbox));
-  const budget = AbortSignal.timeout(OSM_BUDGET_MS);
-  let lastError: unknown;
-  for (const url of ENDPOINTS) {
-    if (budget.aborted) break;
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        body,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-        signal: AbortSignal.any([budget, AbortSignal.timeout(PER_SERVER_MS)]),
-      });
-      if (!res.ok) throw new Error(`Overpass ${res.status}`);
-      const json = (await res.json()) as { elements: OsmElement[] };
-      return toPlaces(json.elements);
-    } catch (e) {
-      lastError = e;
-    }
+async function fetchOsm(bbox: Bbox): Promise<Place[]> {
+  // In production a Vercel function relays the query, because Overpass rejects
+  // anonymous browser requests. `vite dev` has no /api, so go direct there.
+  const res = await fetch(`/api/places?bbox=${bbox.join(',')}`, { signal: AbortSignal.timeout(OSM_BUDGET_MS + 5000) }).catch(() => null);
+  let text: string;
+  if (res?.ok && res.headers.get('content-type')?.includes('json')) {
+    text = await res.text();
+  } else if (import.meta.env.DEV) {
+    text = await fetchOverpass(bbox, { budgetMs: OSM_BUDGET_MS, perServerMs: PER_SERVER_MS });
+  } else {
+    throw new Error(`OpenStreetMap relay answered ${res?.status ?? 'nothing'}`);
   }
-  throw lastError ?? new Error('OpenStreetMap timed out');
+  return toPlaces((JSON.parse(text) as { elements: OsmElement[] }).elements);
 }
 
 interface WikiPage {
@@ -171,7 +145,7 @@ interface WikiPage {
 const NOT_A_DESTINATION =
   /\b(district|division|suburb|neighbou?rhood|locality|village|town|city|taluka|tehsil|ward|constituency|battle|war|siege|hospital|school|clinic|company|organi[sz]ation|metro station|airport|mall|apartment|housing|hotel|software|bank|gram panchayat)\b|^place$/i;
 
-async function fetchWiki([s, w, n, e]: number[]): Promise<Place[]> {
+async function fetchWiki([s, w, n, e]: Bbox): Promise<Place[]> {
   // Ask about the centre of the snapped box, so this request carries no more than the map one does.
   const lat = ((s + n) / 2).toFixed(3);
   const lng = ((w + e) / 2).toFixed(3);
