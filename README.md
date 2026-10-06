@@ -23,7 +23,8 @@ Built for the [Hacktoberfest Open-Source AI Challenge, Week 1: Touch Grass](http
   snapped to a ~1 km grid**, never your exact point.
 - **Works offline after the first run.** Model weights are cached in the browser. Map results
   are cached per area for a week.
-- **Costs nothing.** No API keys, no accounts, no server. It's a static site.
+- **Costs nothing.** No API keys, no accounts. It's a static site plus one tiny cached
+  relay function (`api/places.ts`) on Vercel's free tier.
 - **Swappable.** Choose Gemma 3 1B (~0.7 GB, for phones) or Gemma 2 2B (~1.4 GB, better clues).
 
 ## Run it
@@ -33,7 +34,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. You need a browser with WebGPU (Chrome or Edge on desktop,
+Open http://localhost:5173. Live: https://hacktoberfest-26.vercel.app You need a browser with WebGPU (Chrome or Edge on desktop,
 Chrome on Android 12+). Without WebGPU it still works, with built-in template clues.
 
 Testing at your desk:
@@ -53,6 +54,10 @@ GitHub Pages) to try it outside.
 - TypeScript + Vite, no framework, ~20 kB of app code
 - [`@mlc-ai/web-llm`](https://github.com/mlc-ai/web-llm) running Gemma in a Web Worker
 - OpenStreetMap via the public Overpass API, plus the Wikipedia geosearch API (both keyless)
+- `api/places.ts`: a Vercel function that relays the Overpass query. The public server
+  rejects anonymous browser requests, so the relay identifies the app, falls back across
+  four mirrors and lets the CDN cache each ~1 km box for a week. It only ever sees the
+  grid-snapped box. In `npm run dev` the browser queries Overpass directly.
 
 ## Known limits
 
