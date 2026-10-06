@@ -34,7 +34,8 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. Live: https://hacktoberfest-26.vercel.app You need a browser with WebGPU (Chrome or Edge on desktop,
+Open http://localhost:5173 (or the live app: https://hacktoberfest-26.vercel.app).
+You need a browser with WebGPU (Chrome or Edge on desktop,
 Chrome on Android 12+). Without WebGPU it still works, with built-in template clues.
 
 Testing at your desk:
