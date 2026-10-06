@@ -1,0 +1,157 @@
+/* High contrast on purpose: this is read outdoors, in sunlight, at a glance. */
+:root {
+  --bg: #f4f1e8;
+  --ink: #1b2a1f;
+  --muted: #56645a;
+  --line: #d6d0bf;
+  --moss: #2f5d3a;
+  --moss-ink: #ffffff;
+  --sun: #e3a72f;
+  --error: #a3341f;
+  --card: #fffdf7;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101511;
+    --ink: #eef0e6;
+    --muted: #a3ad9f;
+    --line: #2b352d;
+    --moss: #7fbf8c;
+    --moss-ink: #0d1a10;
+    --sun: #f0b84a;
+    --error: #f08a72;
+    --card: #171e18;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.screen {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--moss);
+}
+
+h1 { margin: 0.25rem 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -0.01em; }
+h2 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--muted); font-weight: 600; }
+.lede { margin: 0.75rem 0 0; color: var(--muted); }
+.meta { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.hint { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.85rem; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chip {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.chip.on { border-color: var(--moss); background: var(--moss); color: var(--moss-ink); }
+
+select {
+  width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+button { font: inherit; cursor: pointer; }
+button:disabled { opacity: 0.55; cursor: progress; }
+button:focus-visible, .chip:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
+}
+
+.primary {
+  border: 0;
+  border-radius: 10px;
+  background: var(--moss);
+  color: var(--moss-ink);
+  padding: 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  width: 100%;
+}
+.ghost {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  padding: 0.85rem;
+  width: 100%;
+}
+.link {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-decoration: underline;
+  padding: 0.5rem;
+  align-self: center;
+}
+a { color: var(--moss); }
+
+.status { min-height: 1.5em; margin: 0; color: var(--muted); font-size: 0.95rem; }
+.status.error, .warn { color: var(--error); }
+.warn { margin: 0; font-size: 0.9rem; }
+
+.progress { display: flex; gap: 0.35rem; }
+.progress span { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
+.progress span.done { background: var(--moss); }
+.progress span.now { background: var(--sun); }
+
+.riddle, .postcard {
+  margin: 0;
+  padding: 1.25rem;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-left: 5px solid var(--sun);
+  border-radius: 10px;
+  font-size: 1.35rem;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+.postcard { font-size: 1.1rem; }
+.heading { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.pocket { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto; }
+.answer { margin: 0; padding: 0.85rem; border: 1.5px dashed var(--line); border-radius: 10px; }
+
+.found h1 { font-size: 2.2rem; }
+.notice { padding: 1.25rem; background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; }
+.notice p { margin: 0; font-size: 1.2rem; }
+.found .primary, .done .primary { margin-top: auto; }
+
+.route { margin: 0; padding-left: 1.25rem; color: var(--muted); }
+.log article { padding: 0.75rem 0; border-top: 1px solid var(--line); }
+.log article p:last-child { margin: 0.15rem 0 0; }
+footer { margin-top: auto; padding-top: 1rem; font-size: 0.75rem; color: var(--muted); }

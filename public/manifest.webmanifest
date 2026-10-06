@@ -1,0 +1,10 @@
+{
+  "name": "Side Quest",
+  "short_name": "Side Quest",
+  "description": "A short walking hunt around you, with clues from an AI that runs on your phone.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f1e8",
+  "theme_color": "#2f5d3a",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
