@@ -1,4 +1,4 @@
-import { fetchOverpass, type Bbox } from '../src/overpass';
+import { fetchOverpass, type Bbox } from '../src/overpass.js';
 
 // A thin, cached relay to OpenStreetMap. It exists because the public Overpass
 // servers reject anonymous browser requests; from here we can identify the app.
