@@ -12,10 +12,10 @@ export interface Place extends LatLng {
   facts: string[];
 }
 
-/** Per-request timeout for Wikipedia, and for each Overpass server in local dev. */
+/** Timeout for the Wikipedia request. */
 const PER_SERVER_MS = 9000;
 /** Total time given to OpenStreetMap before planning with whatever else came back. */
-const OSM_BUDGET_MS = 20000;
+const OSM_BUDGET_MS = 25000;
 /** Parks and temples don't move. A week-old map is fine, and it makes repeat quests work offline. */
 const CACHE_MS = 7 * 24 * 3600 * 1000;
 
@@ -126,7 +126,7 @@ async function fetchOsm(bbox: Bbox): Promise<Place[]> {
   if (res?.ok && res.headers.get('content-type')?.includes('json')) {
     text = await res.text();
   } else if (import.meta.env.DEV) {
-    text = await fetchOverpass(bbox, { budgetMs: OSM_BUDGET_MS, perServerMs: PER_SERVER_MS });
+    text = await fetchOverpass(bbox, { budgetMs: OSM_BUDGET_MS, staggerMs: 3000 });
   } else {
     throw new Error(`OpenStreetMap relay answered ${res?.status ?? 'nothing'}`);
   }

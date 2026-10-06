@@ -26,33 +26,50 @@ export function overpassQuery([s, w, n, e]: Bbox): string {
 out center tags 400;`;
 }
 
+/** Overpass sometimes answers 200 with no elements and a "remark" saying it gave up. */
+function assertComplete(text: string, host: string) {
+  const json = JSON.parse(text) as { elements?: unknown[]; remark?: string };
+  if (!Array.isArray(json.elements)) throw new Error(`${host} sent no elements`);
+  if (json.remark && /error|timed out|timeout|out of memory/i.test(json.remark))
+    throw new Error(`${host}: ${json.remark.slice(0, 120)}`);
+}
+
 /**
- * Raw Overpass JSON for the box, from the first server that answers inside the budget.
- * `headers` lets the server-side caller identify itself, which Overpass asks for and
- * which a browser isn't allowed to do.
+ * Raw Overpass JSON for the box. Servers are asked in turn, `staggerMs` apart, and
+ * the first complete answer wins (a hedged request): a slow primary no longer
+ * costs the whole budget. `headers` lets the server-side caller identify itself,
+ * which Overpass asks for and which a browser isn't allowed to do.
  */
 export async function fetchOverpass(
   bbox: Bbox,
-  { budgetMs, perServerMs, headers = {} }: { budgetMs: number; perServerMs: number; headers?: Record<string, string> },
+  { budgetMs, staggerMs, headers = {} }: { budgetMs: number; staggerMs: number; headers?: Record<string, string> },
 ): Promise<string> {
   const body = 'data=' + encodeURIComponent(overpassQuery(bbox));
-  const budget = AbortSignal.timeout(budgetMs);
-  let lastError: unknown;
-  for (const url of ENDPOINTS) {
-    if (budget.aborted) break;
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        body,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', ...headers },
-        signal: AbortSignal.any([budget, AbortSignal.timeout(perServerMs)]),
-      });
-      const text = await res.text();
-      if (!res.ok || !text.startsWith('{')) throw new Error(`${new URL(url).host} answered ${res.status}`);
-      return text;
-    } catch (e) {
-      lastError = e;
-    }
+  const done = new AbortController();
+  const signal = AbortSignal.any([done.signal, AbortSignal.timeout(budgetMs)]);
+
+  const attempt = async (url: string, delay: number): Promise<string> => {
+    if (delay) await new Promise((r) => setTimeout(r, delay));
+    if (signal.aborted) throw new Error('not needed');
+    const host = new URL(url).host;
+    const res = await fetch(url, {
+      method: 'POST',
+      body,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', ...headers },
+      signal,
+    });
+    const text = await res.text();
+    if (!res.ok || !text.startsWith('{')) throw new Error(`${host} answered ${res.status}`);
+    assertComplete(text, host);
+    return text;
+  };
+
+  try {
+    return await Promise.any(ENDPOINTS.map((url, i) => attempt(url, i * staggerMs)));
+  } catch (e) {
+    const reasons = e instanceof AggregateError ? e.errors.map((x) => (x instanceof Error ? x.message : String(x))) : [String(e)];
+    throw new Error(`OpenStreetMap unavailable (${reasons.join('; ')})`);
+  } finally {
+    done.abort(); // cancel the losers
   }
-  throw lastError ?? new Error('OpenStreetMap timed out');
 }

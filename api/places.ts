@@ -24,14 +24,16 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const body = await fetchOverpass(bbox, {
       budgetMs: 25000,
-      perServerMs: 12000,
+      staggerMs: 3000,
       headers: { 'User-Agent': 'SideQuest/1.0 (+https://github.com/Yash11778/Hacktoberfest-26)' },
     });
+    // Parks don't move: let Vercel's CDN answer repeat boxes for a week. An empty
+    // box is more likely a hiccup than an empty map, so that only sticks for an hour.
+    const empty = body.includes('"elements":[]') || /"elements"\s*:\s*\[\s*\]/.test(body);
     return new Response(body, {
       headers: {
         'Content-Type': 'application/json',
-        // Parks don't move. Let Vercel's CDN answer repeat boxes for a week.
-        'Cache-Control': 'public, s-maxage=604800, stale-while-revalidate=86400',
+        'Cache-Control': empty ? 'public, s-maxage=3600' : 'public, s-maxage=604800, stale-while-revalidate=86400',
       },
     });
   } catch (err) {
