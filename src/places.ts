@@ -113,6 +113,10 @@ export async function fetchPlaces(c: LatLng, radiusM: number): Promise<Place[]> 
   }
   const stale = readCache(key, Infinity);
   if (stale) return stale;
+  console.info('Place lookup', {
+    openStreetMap: osm.status === 'fulfilled' ? osm.value.length : `failed: ${osm.reason}`,
+    wikipedia: wiki.status === 'fulfilled' ? wiki.value.length : `failed: ${wiki.reason}`,
+  });
   if (osm.status === 'fulfilled' && wiki.status === 'fulfilled')
     throw new Error("The map has nothing marked around here yet. Try a longer walk, or add a place to OpenStreetMap!");
   throw new Error('The free map servers are busy right now. Give it a minute and try again.');

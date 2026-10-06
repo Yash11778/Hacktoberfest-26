@@ -170,6 +170,7 @@ async function startQuest(gpu: boolean) {
     const route = planLoop(home, places, settings.minutes);
     if (route.length < 2) {
       status(`Only found ${route.length} walkable spot${route.length === 1 ? '' : 's'} on the map near you. Try a longer walk, or OpenStreetMap may be thin here.`, true);
+      offerDemo();
       go.disabled = false;
       return;
     }
@@ -197,13 +198,31 @@ async function startQuest(gpu: boolean) {
     renderStop();
     watch();
   } catch (e) {
-    status(errorText(e), true);
+    let text = errorText(e);
+    if (!fakeHome && homeAccuracy > 1000)
+      text += ` This device only knows where you are to within ~${(homeAccuracy / 1000).toFixed(0)} km, so it may be looking in the wrong place. A phone with GPS does much better.`;
+    status(text, true);
+    offerDemo();
     go.disabled = false;
   }
 }
 
+/** A way in for anyone whose location is off, or who is judging this from a desk. */
+function offerDemo() {
+  if (fakeHome || document.querySelector('#demo')) return;
+  document.querySelector('#status')?.insertAdjacentHTML(
+    'afterend',
+    '<a class="ghost" id="demo" href="/?at=18.5195,73.8553&sim" style="text-align:center;text-decoration:none">Try a demo walk in Pune instead</a>',
+  );
+}
+
+/** Laptops locate by Wi-Fi or IP and can be kilometres out; worth saying when a lookup comes back empty. */
+let homeAccuracy = 0;
+
 async function getHome(): Promise<LatLng> {
   const pos = await currentPosition();
+  homeAccuracy = pos.coords.accuracy;
+  console.info('Location accuracy (m)', Math.round(homeAccuracy));
   return { lat: pos.coords.latitude, lng: pos.coords.longitude };
 }
 
